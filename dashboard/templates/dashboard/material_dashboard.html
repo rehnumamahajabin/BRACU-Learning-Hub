@@ -1,0 +1,229 @@
+{% extends 'dashboard/base.html' %}
+
+{% block content %}
+<div class="row mb-4">
+  <div class="col-md-8">
+    <h2>Study Materials</h2>
+    <p class="text-muted">Find and share course materials</p>
+  </div>
+  <div class="col-md-4 text-end">
+    {% if user.is_authenticated %}
+    <a href="{% url 'material_upload' %}" class="btn btn-primary">
+      <i class="bi bi-upload"></i> Upload Material
+    </a>
+    <a href="{% url 'saved_materials' %}" class="btn btn-outline-primary ms-2">
+      <i class="bi bi-bookmark"></i> Saved
+    </a>
+    {% endif %}
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-md-3">
+    <div class="card">
+      <div class="card-header">
+        <h5>Filters</h5>
+      </div>
+      <div class="card-body">
+        <form method="GET" action="{% url 'material_list' %}">
+          <div class="mb-3">
+            <label class="form-label">Search</label>
+            <input type="text" name="q" class="form-control" placeholder="Search materials..." value="{{ request.GET.q }}">
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label">Subject</label>
+            <select name="subject" class="form-select">
+              <option value="">All Subjects</option>
+              {% for subject in subjects %}
+              <option value="{{ subject.id }}" {% if request.GET.subject == subject.id|stringformat:"s" %}selected{% endif %}>
+                {{ subject.code }} - {{ subject.name }}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label">Type</label>
+            <select name="type" class="form-select">
+              <option value="">All Types</option>
+              <option value="note" {% if request.GET.type == 'note' %}selected{% endif %}>Class Notes</option>
+              <option value="slide" {% if request.GET.type == 'slide' %}selected{% endif %}>Presentation Slides</option>
+              <option value="assignment" {% if request.GET.type == 'assignment' %}selected{% endif %}>Assignments</option>
+              <option value="book" {% if request.GET.type == 'book' %}selected{% endif %}>Reference Books</option>
+              <option value="question" {% if request.GET.type == 'question' %}selected{% endif %}>Previous Questions</option>
+              <option value="other" {% if request.GET.type == 'other' %}selected{% endif %}>Other</option>
+            </select>
+          </div>
+          
+          <button type="submit" class="btn btn-primary w-100">
+            <i class="bi bi-funnel"></i> Apply Filters
+          </button>
+          <a href="{% url 'material_list' %}" class="btn btn-outline-secondary w-100 mt-2">
+            <i class="bi bi-x-circle"></i> Clear Filters
+          </a>
+        </form>
+      </div>
+    </div>
+    
+    <div class="card mt-4">
+      <div class="card-header">
+        <h5>Quick Stats</h5>
+      </div>
+      <div class="card-body">
+        <div class="text-center">
+          <h4>{{ materials.count }}</h4>
+          <p class="text-muted">Total Materials</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-9">
+    {% if materials %}
+    <div class="row">
+      {% for material in materials %}
+      <div class="col-md-6 col-lg-4 mb-4">
+        <div class="card h-100">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-start">
+              <h6 class="card-title">{{ material.title|truncatechars:40 }}</h6>
+              <span class="badge bg-info">{{ material.get_material_type_display }}</span>
+            </div>
+            
+            <p class="card-text text-muted small">
+              <i class="bi bi-journal-text"></i> {{ material.subject.name }}
+            </p>
+            
+            <p class="card-text small">
+              {{ material.description|truncatechars:80 }}
+            </p>
+            
+            <div class="mt-3">
+              <div class="d-flex justify-content-between align-items-center">
+                <div>
+                  <i class="bi bi-download text-primary"></i>
+                  <small class="text-muted">{{ material.downloads }}</small>
+                  
+                  <i class="bi bi-eye text-primary ms-2"></i>
+                  <small class="text-muted">{{ material.views }}</small>
+                  
+                  <i class="bi bi-star text-warning ms-2"></i>
+                  <small class="text-muted">
+                    {% if material.ratings.count > 0 %}
+                    {{ material.ratings.aggregate.models.Avg.score|default:"0"|floatformat:1 }}
+                    {% else %}
+                    0.0
+                    {% endif %}
+                  </small>
+                </div>
+                
+                <small class="text-muted">{{ material.upload_date|timesince }} ago</small>
+              </div>
+            </div>
+            
+            <div class="mt-3">
+              {% if material.tags %}
+              <div class="mb-2">
+                {% for tag in material.tags.split %}
+                <span class="badge bg-light text-dark small me-1">{{ tag }}</span>
+                {% endfor %}
+              </div>
+              {% endif %}
+              
+              <div class="d-flex justify-content-between">
+                <a href="{% url 'material_detail' material.pk %}" class="btn btn-sm btn-outline-primary">
+                  <i class="bi bi-eye"></i> View
+                </a>
+                
+                {% if user.is_authenticated %}
+                <form method="POST" action="{% url 'save_material' material.pk %}" class="d-inline">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-sm btn-outline-warning">
+                    <i class="bi bi-bookmark"></i> Save
+                  </button>
+                </form>
+                {% endif %}
+                
+                <a href="{{ material.file.url }}" class="btn btn-sm btn-success" download>
+                  <i class="bi bi-download"></i>
+                </a>
+              </div>
+            </div>
+          </div>
+          
+          <div class="card-footer bg-transparent">
+            <small class="text-muted">
+              <i class="bi bi-person"></i> {{ material.uploaded_by.username }}
+              {% if material.uploaded_by == request.user %}
+              <span class="badge bg-secondary ms-1">Yours</span>
+              {% endif %}
+            </small>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    
+    <!-- Pagination -->
+    {% if is_paginated %}
+    <nav aria-label="Page navigation" class="mt-4">
+      <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+        <li class="page-item">
+          <a class="page-link" href="?page=1&q={{ request.GET.q }}&subject={{ request.GET.subject }}&type={{ request.GET.type }}">First</a>
+        </li>
+        <li class="page-item">
+          <a class="page-link" href="?page={{ page_obj.previous_page_number }}&q={{ request.GET.q }}&subject={{ request.GET.subject }}&type={{ request.GET.type }}">Previous</a>
+        </li>
+        {% endif %}
+        
+        {% for num in page_obj.paginator.page_range %}
+        {% if page_obj.number == num %}
+        <li class="page-item active">
+          <a class="page-link" href="?page={{ num }}&q={{ request.GET.q }}&subject={{ request.GET.subject }}&type={{ request.GET.type }}">{{ num }}</a>
+        </li>
+        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+        <li class="page-item">
+          <a class="page-link" href="?page={{ num }}&q={{ request.GET.q }}&subject={{ request.GET.subject }}&type={{ request.GET.type }}">{{ num }}</a>
+        </li>
+        {% endif %}
+        {% endfor %}
+        
+        {% if page_obj.has_next %}
+        <li class="page-item">
+          <a class="page-link" href="?page={{ page_obj.next_page_number }}&q={{ request.GET.q }}&subject={{ request.GET.subject }}&type={{ request.GET.type }}">Next</a>
+        </li>
+        <li class="page-item">
+          <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}&q={{ request.GET.q }}&subject={{ request.GET.subject }}&type={{ request.GET.type }}">Last</a>
+        </li>
+        {% endif %}
+      </ul>
+    </nav>
+    {% endif %}
+    
+    {% else %}
+    <div class="card">
+      <div class="card-body text-center py-5">
+        <i class="bi bi-folder-x" style="font-size: 3rem; color: #ccc;"></i>
+        <h4 class="mt-3">No Materials Found</h4>
+        <p class="text-muted">Try adjusting your filters or upload the first material!</p>
+        {% if user.is_authenticated %}
+        <a href="{% url 'material_upload' %}" class="btn btn-primary mt-2">
+          <i class="bi bi-upload"></i> Upload Material
+        </a>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Add any JavaScript for material dashboard here
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,7 @@
+Django==4.2.0
+django-crispy-forms==2.0
+crispy-bootstrap5==0.7
+Pillow==10.0.0
+python-decouple==3.8
+django-filter==23.3
+django-allauth==0.54.0  # Optional for advanced auth

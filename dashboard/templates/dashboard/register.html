@@ -1,0 +1,56 @@
+{% extends 'dashboard/base.html' %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-8 col-lg-6">
+    <div class="card">
+      <div class="card-header">
+        <h4>Create Student Account</h4>
+      </div>
+      <div class="card-body">
+        <form method="POST">
+          {% csrf_token %}
+          
+          <div class="row">
+            <div class="col-md-6">
+              {{ form.first_name|as_crispy_field }}
+            </div>
+            <div class="col-md-6">
+              {{ form.last_name|as_crispy_field }}
+            </div>
+          </div>
+          
+          {{ form.username|as_crispy_field }}
+          {{ form.email|as_crispy_field }}
+          {{ form.password1|as_crispy_field }}
+          {{ form.password2|as_crispy_field }}
+          
+          <div class="form-group mt-4">
+            <button class="btn btn-primary btn-block" type="submit">
+              <i class="bi bi-person-plus"></i> Register
+            </button>
+          </div>
+        </form>
+        
+        <div class="border-top pt-3 mt-3">
+          <small class="text-muted">
+            Already have an account? 
+            <a href="{% url 'login' %}" class="ml-2">Login Here</a>
+          </small>
+        </div>
+        
+        <div class="alert alert-info mt-3">
+          <h6><i class="bi bi-info-circle"></i> Registration Requirements:</h6>
+          <ul class="mb-0">
+            <li>Use your BRAC University email if possible</li>
+            <li>Username must be unique</li>
+            <li>Password must be at least 8 characters</li>
+            <li>After registration, you can update your profile</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

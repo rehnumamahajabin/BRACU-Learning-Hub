@@ -1,0 +1,168 @@
+{% extends 'dashboard/base.html' %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+<div class="row">
+  <div class="col-lg-8">
+    <div class="card">
+      <div class="card-header">
+        <h4>Edit Profile</h4>
+      </div>
+      <div class="card-body">
+        <form method="POST" enctype="multipart/form-data">
+          {% csrf_token %}
+          <div class="row">
+            <div class="col-md-6">
+              {{ form.image|as_crispy_field }}
+            </div>
+            <div class="col-md-6">
+              {{ form.cgpa|as_crispy_field }}
+            </div>
+          </div>
+          
+          {{ form.bio|as_crispy_field }}
+          
+          <div class="row">
+            <div class="col-md-6">
+              {{ form.department|as_crispy_field }}
+            </div>
+            <div class="col-md-3">
+              {{ form.credits_completed|as_crispy_field }}
+            </div>
+            <div class="col-md-3">
+              {{ form.is_studying|as_crispy_field }}
+            </div>
+          </div>
+          
+          <div class="mt-4">
+            <button type="submit" class="btn btn-primary">
+              <i class="bi bi-check-circle"></i> Update Profile
+            </button>
+            <a href="{% url 'profile' %}" class="btn btn-secondary">
+              <i class="bi bi-x-circle"></i> Cancel
+            </a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-4">
+    <div class="card">
+      <div class="card-header">
+        <h5>Profile Preview</h5>
+      </div>
+      <div class="card-body text-center">
+        <img id="profile-preview" src="{{ user.profile.image.url }}" class="rounded-circle mb-3" width="150" height="150" style="object-fit: cover;">
+        <h4 id="username-preview">{{ user.username }}</h4>
+        <p class="text-muted">{{ user.email }}</p>
+        
+        <div class="mt-3 text-start">
+          <p><strong>Bio:</strong> <span id="bio-preview">{{ user.profile.bio|default:"No bio"|truncatechars:100 }}</span></p>
+          <p><strong>CGPA:</strong> <span id="cgpa-preview">{{ user.profile.cgpa|default:"Not set" }}</span></p>
+          <p><strong>Credits:</strong> <span id="credits-preview">{{ user.profile.credits_completed }}</span></p>
+          <p><strong>Department:</strong> <span id="dept-preview">{{ user.profile.department.name|default:"Not set" }}</span></p>
+          <p><strong>Status:</strong> 
+            <span id="status-preview" class="badge">
+              {% if user.profile.is_studying %}Studying{% else %}Not Studying{% endif %}
+            </span>
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="card mt-4">
+      <div class="card-header">
+        <h5>Tips</h5>
+      </div>
+      <div class="card-body">
+        <ul class="list-unstyled">
+          <li><i class="bi bi-check-circle text-success"></i> Use a clear profile picture</li>
+          <li><i class="bi bi-check-circle text-success"></i> Add your department info</li>
+          <li><i class="bi bi-check-circle text-success"></i> Share your academic interests</li>
+          <li><i class="bi bi-check-circle text-success"></i> Update your study status</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Live preview for image
+    const imageInput = document.querySelector('#id_image');
+    const profilePreview = document.querySelector('#profile-preview');
+    
+    if (imageInput) {
+      imageInput.addEventListener('change', function() {
+        if (this.files && this.files[0]) {
+          const reader = new FileReader();
+          reader.onload = function(e) {
+            profilePreview.src = e.target.result;
+          }
+          reader.readAsDataURL(this.files[0]);
+        }
+      });
+    }
+    
+    // Live preview for bio
+    const bioInput = document.querySelector('#id_bio');
+    const bioPreview = document.querySelector('#bio-preview');
+    
+    if (bioInput && bioPreview) {
+      bioInput.addEventListener('input', function() {
+        bioPreview.textContent = this.value || 'No bio';
+      });
+    }
+    
+    // Live preview for CGPA
+    const cgpaInput = document.querySelector('#id_cgpa');
+    const cgpaPreview = document.querySelector('#cgpa-preview');
+    
+    if (cgpaInput && cgpaPreview) {
+      cgpaInput.addEventListener('input', function() {
+        cgpaPreview.textContent = this.value || 'Not set';
+      });
+    }
+    
+    // Live preview for credits
+    const creditsInput = document.querySelector('#id_credits_completed');
+    const creditsPreview = document.querySelector('#credits-preview');
+    
+    if (creditsInput && creditsPreview) {
+      creditsInput.addEventListener('input', function() {
+        creditsPreview.textContent = this.value;
+      });
+    }
+    
+    // Live preview for department
+    const deptInput = document.querySelector('#id_department');
+    const deptPreview = document.querySelector('#dept-preview');
+    
+    if (deptInput && deptPreview) {
+      deptInput.addEventListener('change', function() {
+        const selectedOption = this.options[this.selectedIndex];
+        deptPreview.textContent = selectedOption.text || 'Not set';
+      });
+    }
+    
+    // Live preview for study status
+    const statusInput = document.querySelector('#id_is_studying');
+    const statusPreview = document.querySelector('#status-preview');
+    
+    if (statusInput && statusPreview) {
+      statusInput.addEventListener('change', function() {
+        if (this.checked) {
+          statusPreview.textContent = 'Studying';
+          statusPreview.className = 'badge bg-success';
+        } else {
+          statusPreview.textContent = 'Not Studying';
+          statusPreview.className = 'badge bg-secondary';
+        }
+      });
+    }
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,194 @@
+{% extends 'dashboard/base.html' %}
+
+{% block content %}
+<div class="row">
+  <div class="col-md-4">
+    <div class="card">
+      <div class="card-header">
+        <h4>Profile</h4>
+      </div>
+      <div class="card-body text-center">
+        <img src="{{ user.profile.image.url }}" class="rounded-circle mb-3" width="150" height="150" style="object-fit: cover;">
+        <h4>{{ user.username }}</h4>
+        <p class="text-muted">{{ user.email }}</p>
+        
+        <div class="mt-4">
+          <p><strong>Department:</strong> {{ user.profile.department.name|default:"Not set" }}</p>
+          <p><strong>CGPA:</strong> {{ user.profile.cgpa|default:"Not set" }}</p>
+          <p><strong>Credits Completed:</strong> {{ user.profile.credits_completed }}</p>
+          <p><strong>Status:</strong> 
+            {% if user.profile.is_studying %}
+            <span class="badge bg-success">Currently Studying</span>
+            {% else %}
+            <span class="badge bg-secondary">Not Studying</span>
+            {% endif %}
+          </p>
+        </div>
+        
+        <a href="{% url 'profile_edit' %}" class="btn btn-primary mt-3">
+          <i class="bi bi-pencil"></i> Edit Profile
+        </a>
+      </div>
+    </div>
+
+    <div class="card mt-4">
+      <div class="card-header">
+        <h5>Stats</h5>
+      </div>
+      <div class="card-body">
+        <div class="row text-center">
+          <div class="col-6">
+            <h5>{{ user_materials.count }}</h5>
+            <p class="text-muted">Uploads</p>
+          </div>
+          <div class="col-6">
+            <h5>{{ saved_materials.count }}</h5>
+            <p class="text-muted">Saved</p>
+          </div>
+          <div class="col-6">
+            <h5>{{ user_posts.count }}</h5>
+            <p class="text-muted">Posts</p>
+          </div>
+          <div class="col-6">
+            <h5>{{ user.profile.reputation }}</h5>
+            <p class="text-muted">Reputation</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-8">
+    <div class="card">
+      <div class="card-header">
+        <h5>Bio</h5>
+      </div>
+      <div class="card-body">
+        {% if user.profile.bio %}
+        <p>{{ user.profile.bio }}</p>
+        {% else %}
+        <p class="text-muted">No bio added yet. <a href="{% url 'profile_edit' %}">Add one now</a>.</p>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="card mt-4">
+      <div class="card-header">
+        <div class="d-flex justify-content-between align-items-center">
+          <h5>My Uploads</h5>
+          <a href="{% url 'material_upload' %}" class="btn btn-sm btn-primary">
+            <i class="bi bi-plus"></i> Upload New
+          </a>
+        </div>
+      </div>
+      <div class="card-body">
+        {% if user_materials %}
+        <div class="table-responsive">
+          <table class="table table-hover">
+            <thead>
+              <tr>
+                <th>Title</th>
+                <th>Subject</th>
+                <th>Type</th>
+                <th>Date</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for material in user_materials %}
+              <tr>
+                <td>
+                  <a href="{% url 'material_detail' material.pk %}">
+                    {{ material.title|truncatechars:30 }}
+                  </a>
+                </td>
+                <td>{{ material.subject.code }}</td>
+                <td><span class="badge bg-info">{{ material.get_material_type_display }}</span></td>
+                <td>{{ material.upload_date|date:"M d, Y" }}</td>
+                <td>
+                  <a href="{% url 'material_edit' material.pk %}" class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-pencil"></i>
+                  </a>
+                  <a href="{% url 'material_detail' material.pk %}" class="btn btn-sm btn-outline-info">
+                    <i class="bi bi-eye"></i>
+                  </a>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <p class="text-muted">You haven't uploaded any materials yet.</p>
+        <a href="{% url 'material_upload' %}" class="btn btn-primary">Upload Your First Material</a>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="card mt-4">
+      <div class="card-header">
+        <div class="d-flex justify-content-between align-items-center">
+          <h5>My Posts</h5>
+          <a href="{% url 'post_create' %}" class="btn btn-sm btn-success">
+            <i class="bi bi-plus"></i> New Post
+          </a>
+        </div>
+      </div>
+      <div class="card-body">
+        {% if user_posts %}
+        <div class="list-group">
+          {% for post in user_posts %}
+          <a href="{% url 'post_detail' post.pk %}" class="list-group-item list-group-item-action">
+            <div class="d-flex w-100 justify-content-between">
+              <h6 class="mb-1">{{ post.title|truncatechars:50 }}</h6>
+              <small>{{ post.created_at|timesince }} ago</small>
+            </div>
+            <p class="mb-1 text-muted">{{ post.content|truncatechars:100 }}</p>
+            <small>
+              <span class="badge bg-secondary">{{ post.get_post_type_display }}</span>
+              <i class="bi bi-chat ms-2"></i> {{ post.post_comments.count }}
+              <i class="bi bi-hand-thumbs-up ms-2"></i> {{ post.upvotes }}
+            </small>
+          </a>
+          {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-muted">You haven't created any posts yet.</p>
+        <a href="{% url 'post_create' %}" class="btn btn-success">Create Your First Post</a>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="card mt-4">
+      <div class="card-header">
+        <h5>Saved Materials</h5>
+      </div>
+      <div class="card-body">
+        {% if saved_materials %}
+        <div class="list-group">
+          {% for saved in saved_materials %}
+          <a href="{% url 'material_detail' saved.material.pk %}" class="list-group-item list-group-item-action">
+            <div class="d-flex w-100 justify-content-between">
+              <h6 class="mb-1">{{ saved.material.title|truncatechars:50 }}</h6>
+              <small>{{ saved.saved_at|timesince }} ago</small>
+            </div>
+            <small class="text-muted">
+              {{ saved.material.subject.name }} • 
+              {{ saved.material.get_material_type_display }} • 
+              Uploaded by {{ saved.material.uploaded_by.username }}
+            </small>
+            {% if saved.note %}
+            <p class="mt-1 mb-0"><small><i>{{ saved.note }}</i></small></p>
+            {% endif %}
+          </a>
+          {% endfor %}
+        </div>
+        <a href="{% url 'saved_materials' %}" class="btn btn-outline-primary btn-sm mt-3">View All Saved</a>
+        {% else %}
+        <p class="text-muted">You haven't saved any materials yet.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

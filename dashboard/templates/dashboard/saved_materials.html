@@ -1,0 +1,426 @@
+{% extends 'dashboard/base.html' %}
+
+{% block content %}
+<div class="row mb-4">
+  <div class="col-md-8">
+    <h2>Saved Materials</h2>
+    <p class="text-muted">Your collection of saved study materials</p>
+  </div>
+  <div class="col-md-4 text-end">
+    <a href="{% url 'material_list' %}" class="btn btn-outline-primary">
+      <i class="bi bi-search"></i> Browse More
+    </a>
+  </div>
+</div>
+
+{% if saved_items %}
+<div class="row">
+  <div class="col-md-3">
+    <div class="card">
+      <div class="card-header">
+        <h5>Filters</h5>
+      </div>
+      <div class="card-body">
+        <div class="mb-3">
+          <label class="form-label">Sort By</label>
+          <select class="form-select" id="sortSelect">
+            <option value="recent">Recently Saved</option>
+            <option value="oldest">Oldest Saved</option>
+            <option value="title">Title A-Z</option>
+            <option value="rating">Highest Rated</option>
+            <option value="downloads">Most Downloaded</option>
+          </select>
+        </div>
+        
+        <div class="mb-3">
+          <label class="form-label">Material Type</label>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="typeAll" checked>
+            <label class="form-check-label" for="typeAll">All Types</label>
+          </div>
+          <div class="form-check">
+            <input class="form-check-input material-type" type="checkbox" value="note" id="typeNote" checked>
+            <label class="form-check-label" for="typeNote">Class Notes</label>
+          </div>
+          <div class="form-check">
+            <input class="form-check-input material-type" type="checkbox" value="slide" id="typeSlide" checked>
+            <label class="form-check-label" for="typeSlide">Slides</label>
+          </div>
+          <div class="form-check">
+            <input class="form-check-input material-type" type="checkbox" value="assignment" id="typeAssignment" checked>
+            <label class="form-check-label" for="typeAssignment">Assignments</label>
+          </div>
+          <div class="form-check">
+            <input class="form-check-input material-type" type="checkbox" value="question" id="typeQuestion" checked>
+            <label class="form-check-label" for="typeQuestion">Questions</label>
+          </div>
+        </div>
+        
+        <div class="mb-3">
+          <label class="form-label">Subjects</label>
+          <input type="text" class="form-control" placeholder="Filter by subject..." id="subjectFilter">
+        </div>
+        
+        <button class="btn btn-primary w-100" onclick="applyFilters()">
+          <i class="bi bi-funnel"></i> Apply Filters
+        </button>
+        <button class="btn btn-outline-secondary w-100 mt-2" onclick="clearFilters()">
+          <i class="bi bi-x-circle"></i> Clear Filters
+        </button>
+      </div>
+    </div>
+
+    <div class="card mt-4">
+      <div class="card-header">
+        <h5>Stats</h5>
+      </div>
+      <div class="card-body">
+        <div class="text-center">
+          <h4>{{ saved_items.count }}</h4>
+          <p class="text-muted">Total Saved</p>
+        </div>
+        <div class="row text-center mt-3">
+          <div class="col-6">
+            <h6>{{ note_count|default:"0" }}</h6>
+            <small class="text-muted">Notes</small>
+          </div>
+          <div class="col-6">
+            <h6>{{ slide_count|default:"0" }}</h6>
+            <small class="text-muted">Slides</small>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-9">
+    <div class="row" id="materialsGrid">
+      {% for saved in saved_items %}
+      <div class="col-md-6 col-lg-4 mb-4 material-item" 
+           data-type="{{ saved.material.material_type }}"
+           data-subject="{{ saved.material.subject.name|lower }}"
+           data-title="{{ saved.material.title|lower }}"
+           data-date="{{ saved.saved_at|date:'U' }}"
+           data-rating="{{ saved.material.ratings.count }}">
+        <div class="card h-100">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+              <h6 class="card-title">{{ saved.material.title|truncatechars:40 }}</h6>
+              <span class="badge bg-info">{{ saved.material.get_material_type_display }}</span>
+            </div>
+            
+            <p class="card-text text-muted small mb-2">
+              <i class="bi bi-journal-text"></i> {{ saved.material.subject.name }}
+            </p>
+            
+            <p class="card-text small mb-3">
+              {{ saved.material.description|truncatechars:80 }}
+            </p>
+            
+            <div class="mb-3">
+              <small class="text-muted">
+                <i class="bi bi-download"></i> {{ saved.material.downloads }}
+                <i class="bi bi-eye ms-2"></i> {{ saved.material.views }}
+                <i class="bi bi-star ms-2"></i> 
+                {% with ratings=saved.material.ratings.all %}
+                {% if ratings %}
+                {{ ratings.aggregate.models.Avg.score|default:"0.0"|floatformat:1 }}
+                {% else %}
+                0.0
+                {% endif %}
+                {% endwith %}
+              </small>
+            </div>
+            
+            {% if saved.note %}
+            <div class="alert alert-light small mb-3">
+              <strong>Your Note:</strong> {{ saved.note|truncatechars:100 }}
+            </div>
+            {% endif %}
+            
+            <div class="d-flex justify-content-between">
+              <a href="{% url 'material_detail' saved.material.pk %}" class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-eye"></i> View
+              </a>
+              
+              <form method="POST" action="{% url 'save_material' saved.material.pk %}" class="d-inline">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-outline-danger">
+                  <i class="bi bi-bookmark-x"></i> Unsave
+                </button>
+              </form>
+              
+              <a href="{{ saved.material.file.url }}" class="btn btn-sm btn-success" download>
+                <i class="bi bi-download"></i>
+              </a>
+            </div>
+          </div>
+          
+          <div class="card-footer bg-transparent">
+            <div class="d-flex justify-content-between align-items-center">
+              <small class="text-muted">
+                Saved {{ saved.saved_at|timesince }} ago
+              </small>
+              <small class="text-muted">
+                <i class="bi bi-person"></i> {{ saved.material.uploaded_by.username }}
+              </small>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    
+    <div class="text-center mt-4">
+      <p class="text-muted">
+        Showing {{ saved_items.count }} saved materials
+      </p>
+    </div>
+  </div>
+</div>
+{% else %}
+<div class="row justify-content-center">
+  <div class="col-md-8">
+    <div class="card">
+      <div class="card-body text-center py-5">
+        <i class="bi bi-bookmark" style="font-size: 3rem; color: #ccc;"></i>
+        <h4 class="mt-3">No Saved Materials Yet</h4>
+        <p class="text-muted">Save materials you find useful for quick access later.</p>
+        <div class="mt-4">
+          <a href="{% url 'material_list' %}" class="btn btn-primary">
+            <i class="bi bi-search"></i> Browse Materials
+          </a>
+          <a href="{% url 'home' %}" class="btn btn-outline-primary ms-2">
+            <i class="bi bi-house"></i> Go to Home
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Edit Note Modal -->
+<div class="modal fade" id="editNoteModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Edit Note</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <form id="noteForm">
+          <div class="mb-3">
+            <label class="form-label">Material</label>
+            <input type="text" class="form-control" id="modalMaterialTitle" readonly>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Your Note</label>
+            <textarea class="form-control" id="modalNoteContent" rows="3" placeholder="Add a personal note..."></textarea>
+            <div class="form-text">Add notes to remember why you saved this material.</div>
+          </div>
+          <input type="hidden" id="modalMaterialId">
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" onclick="saveNote()">Save Note</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Initialize sort
+    const sortSelect = document.querySelector('#sortSelect');
+    if (sortSelect) {
+      sortSelect.addEventListener('change', applyFilters);
+    }
+    
+    // Type filter all/none
+    const typeAll = document.querySelector('#typeAll');
+    const typeCheckboxes = document.querySelectorAll('.material-type');
+    
+    if (typeAll && typeCheckboxes) {
+      typeAll.addEventListener('change', function() {
+        typeCheckboxes.forEach(cb => {
+          cb.checked = this.checked;
+        });
+        applyFilters();
+      });
+      
+      typeCheckboxes.forEach(cb => {
+        cb.addEventListener('change', function() {
+          const allChecked = Array.from(typeCheckboxes).every(cb => cb.checked);
+          typeAll.checked = allChecked;
+          applyFilters();
+        });
+      });
+    }
+    
+    // Subject filter
+    const subjectFilter = document.querySelector('#subjectFilter');
+    if (subjectFilter) {
+      subjectFilter.addEventListener('input', applyFilters);
+    }
+  });
+
+  function applyFilters() {
+    const items = document.querySelectorAll('.material-item');
+    const sortValue = document.querySelector('#sortSelect').value;
+    const subjectFilterValue = document.querySelector('#subjectFilter').value.toLowerCase();
+    
+    // Get checked types
+    const checkedTypes = [];
+    document.querySelectorAll('.material-type:checked').forEach(cb => {
+      checkedTypes.push(cb.value);
+    });
+    
+    // Filter and sort
+    const filteredItems = Array.from(items).filter(item => {
+      const type = item.getAttribute('data-type');
+      const subject = item.getAttribute('data-subject');
+      const title = item.getAttribute('data-title');
+      
+      // Type filter
+      if (checkedTypes.length > 0 && !checkedTypes.includes(type)) {
+        return false;
+      }
+      
+      // Subject/title filter
+      if (subjectFilterValue && 
+          !subject.includes(subjectFilterValue) && 
+          !title.includes(subjectFilterValue)) {
+        return false;
+      }
+      
+      return true;
+    });
+    
+    // Sort
+    filteredItems.sort((a, b) => {
+      switch(sortValue) {
+        case 'recent':
+          return parseInt(b.getAttribute('data-date')) - parseInt(a.getAttribute('data-date'));
+        case 'oldest':
+          return parseInt(a.getAttribute('data-date')) - parseInt(b.getAttribute('data-date'));
+        case 'title':
+          return a.getAttribute('data-title').localeCompare(b.getAttribute('data-title'));
+        case 'rating':
+          return parseFloat(b.getAttribute('data-rating')) - parseFloat(a.getAttribute('data-rating'));
+        case 'downloads':
+          // Would need data-downloads attribute
+          return 0;
+        default:
+          return 0;
+      }
+    });
+    
+    // Update display
+    const grid = document.querySelector('#materialsGrid');
+    if (grid) {
+      // Hide all first
+      items.forEach(item => item.style.display = 'none');
+      
+      // Show filtered
+      filteredItems.forEach(item => {
+        item.style.display = 'block';
+      });
+      
+      // Update message
+      const message = document.querySelector('#materialsGrid').nextElementSibling;
+      if (message && message.classList.contains('text-center')) {
+        message.querySelector('p').textContent = `Showing ${filteredItems.length} saved materials`;
+      }
+    }
+  }
+
+  function clearFilters() {
+    document.querySelector('#sortSelect').value = 'recent';
+    document.querySelector('#typeAll').checked = true;
+    document.querySelectorAll('.material-type').forEach(cb => cb.checked = true);
+    document.querySelector('#subjectFilter').value = '';
+    
+    const items = document.querySelectorAll('.material-item');
+    items.forEach(item => item.style.display = 'block');
+    
+    const message = document.querySelector('#materialsGrid').nextElementSibling;
+    if (message && message.classList.contains('text-center')) {
+      message.querySelector('p').textContent = `Showing ${items.length} saved materials`;
+    }
+  }
+
+  function openNoteModal(materialId, materialTitle, currentNote) {
+    document.querySelector('#modalMaterialId').value = materialId;
+    document.querySelector('#modalMaterialTitle').value = materialTitle;
+    document.querySelector('#modalNoteContent').value = currentNote || '';
+    
+    const modal = new bootstrap.Modal(document.querySelector('#editNoteModal'));
+    modal.show();
+  }
+
+  function saveNote() {
+    const materialId = document.querySelector('#modalMaterialId').value;
+    const noteContent = document.querySelector('#modalNoteContent').value;
+    
+    // This would require AJAX call to update note
+    fetch(`/api/save-note/${materialId}/`, {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': '{{ csrf_token }}',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ note: noteContent }),
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        alert('Note saved successfully!');
+        bootstrap.Modal.getInstance(document.querySelector('#editNoteModal')).hide();
+        // Update the note display on the card
+        const noteElement = document.querySelector(`[data-material-id="${materialId}"] .alert-light`);
+        if (noteElement) {
+          if (noteContent) {
+            noteElement.innerHTML = `<strong>Your Note:</strong> ${noteContent}`;
+            noteElement.style.display = 'block';
+          } else {
+            noteElement.style.display = 'none';
+          }
+        }
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      alert('Error saving note');
+    });
+  }
+
+  // Add note edit buttons to each card
+  document.addEventListener('DOMContentLoaded', function() {
+    const materialItems = document.querySelectorAll('.material-item');
+    materialItems.forEach(item => {
+      const cardBody = item.querySelector('.card-body');
+      const materialId = item.querySelector('form').action.split('/').filter(x => x).pop();
+      const materialTitle = item.querySelector('.card-title').textContent.trim();
+      const noteElement = item.querySelector('.alert-light');
+      const currentNote = noteElement ? noteElement.textContent.replace('Your Note:', '').trim() : '';
+      
+      const noteBtn = document.createElement('button');
+      noteBtn.className = 'btn btn-sm btn-outline-secondary';
+      noteBtn.innerHTML = '<i class="bi bi-pencil"></i> Note';
+      noteBtn.onclick = function() {
+        openNoteModal(materialId, materialTitle, currentNote);
+      };
+      
+      const actionsDiv = item.querySelector('.d-flex.justify-content-between');
+      actionsDiv.appendChild(noteBtn);
+      
+      // Add data attribute for easy reference
+      item.setAttribute('data-material-id', materialId);
+    });
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,252 @@
+{% extends 'dashboard/base.html' %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-8">
+    <div class="card">
+      <div class="card-header">
+        <h4>Upload Material</h4>
+      </div>
+      <div class="card-body">
+        <form method="POST" enctype="multipart/form-data">
+          {% csrf_token %}
+          
+          <div class="row">
+            <div class="col-md-6">
+              {{ form.title|as_crispy_field }}
+            </div>
+            <div class="col-md-6">
+              {{ form.subject|as_crispy_field }}
+            </div>
+          </div>
+          
+          <div class="row">
+            <div class="col-md-6">
+              {{ form.material_type|as_crispy_field }}
+            </div>
+            <div class="col-md-6">
+              {{ form.tags|as_crispy_field }}
+            </div>
+          </div>
+          
+          {{ form.description|as_crispy_field }}
+          
+          <div class="mb-4">
+            {{ form.file|as_crispy_field }}
+            <div class="form-text">
+              Supported formats: PDF, DOC, DOCX, PPT, PPTX, TXT, JPG, PNG (Max 50MB)
+            </div>
+          </div>
+          
+          <div class="alert alert-info">
+            <h6><i class="bi bi-info-circle"></i> Upload Guidelines</h6>
+            <ul class="mb-0">
+              <li>Ensure the material is relevant to BRAC University courses</li>
+              <li>Use clear and descriptive titles</li>
+              <li>Add appropriate tags for better searchability</li>
+              <li>Only upload materials you have permission to share</li>
+              <li>Materials will be reviewed before public availability</li>
+            </ul>
+          </div>
+          
+          <div class="d-flex justify-content-between mt-4">
+            <a href="{% url 'material_list' %}" class="btn btn-secondary">
+              <i class="bi bi-arrow-left"></i> Cancel
+            </a>
+            <button type="submit" class="btn btn-primary">
+              <i class="bi bi-upload"></i> Upload Material
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="card mt-4">
+      <div class="card-header">
+        <h5>Upload Preview</h5>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-4 text-center">
+            <div id="file-preview" class="border rounded p-4 mb-3">
+              <i class="bi bi-file-earmark" style="font-size: 3rem; color: #ccc;"></i>
+              <p class="mt-2 mb-0" id="file-name">No file selected</p>
+              <small class="text-muted" id="file-size">-</small>
+            </div>
+          </div>
+          <div class="col-md-8">
+            <h6 id="preview-title">Material Title</h6>
+            <p class="text-muted small" id="preview-subject">Subject: Not selected</p>
+            <p class="small" id="preview-description">Description will appear here...</p>
+            <div id="preview-tags"></div>
+            <div class="mt-3">
+              <span class="badge bg-info" id="preview-type">Type not selected</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // File preview
+    const fileInput = document.querySelector('#id_file');
+    const filePreview = document.querySelector('#file-preview');
+    const fileName = document.querySelector('#file-name');
+    const fileSize = document.querySelector('#file-size');
+    
+    const fileIcons = {
+      'pdf': 'bi-file-earmark-pdf text-danger',
+      'doc': 'bi-file-earmark-word text-primary',
+      'docx': 'bi-file-earmark-word text-primary',
+      'ppt': 'bi-file-earmark-ppt text-danger',
+      'pptx': 'bi-file-earmark-ppt text-danger',
+      'txt': 'bi-file-earmark-text text-secondary',
+      'jpg': 'bi-file-earmark-image text-success',
+      'jpeg': 'bi-file-earmark-image text-success',
+      'png': 'bi-file-earmark-image text-success',
+      'default': 'bi-file-earmark text-secondary'
+    };
+    
+    if (fileInput) {
+      fileInput.addEventListener('change', function() {
+        if (this.files && this.files[0]) {
+          const file = this.files[0];
+          const fileExtension = file.name.split('.').pop().toLowerCase();
+          const iconClass = fileIcons[fileExtension] || fileIcons.default;
+          
+          fileName.textContent = file.name.length > 20 ? file.name.substring(0, 20) + '...' : file.name;
+          fileSize.textContent = formatFileSize(file.size);
+          
+          // Update icon
+          filePreview.innerHTML = `
+            <i class="bi ${iconClass}" style="font-size: 3rem;"></i>
+            <p class="mt-2 mb-0" id="file-name">${fileName.textContent}</p>
+            <small class="text-muted" id="file-size">${fileSize.textContent}</small>
+          `;
+        } else {
+          fileName.textContent = 'No file selected';
+          fileSize.textContent = '-';
+          filePreview.innerHTML = `
+            <i class="bi bi-file-earmark" style="font-size: 3rem; color: #ccc;"></i>
+            <p class="mt-2 mb-0" id="file-name">No file selected</p>
+            <small class="text-muted" id="file-size">-</small>
+          `;
+        }
+      });
+    }
+    
+    // Title preview
+    const titleInput = document.querySelector('#id_title');
+    const previewTitle = document.querySelector('#preview-title');
+    
+    if (titleInput && previewTitle) {
+      titleInput.addEventListener('input', function() {
+        previewTitle.textContent = this.value || 'Material Title';
+      });
+    }
+    
+    // Description preview
+    const descInput = document.querySelector('#id_description');
+    const previewDesc = document.querySelector('#preview-description');
+    
+    if (descInput && previewDesc) {
+      descInput.addEventListener('input', function() {
+        previewDesc.textContent = this.value || 'Description will appear here...';
+      });
+    }
+    
+    // Subject preview
+    const subjectInput = document.querySelector('#id_subject');
+    const previewSubject = document.querySelector('#preview-subject');
+    
+    if (subjectInput && previewSubject) {
+      subjectInput.addEventListener('change', function() {
+        const selectedOption = this.options[this.selectedIndex];
+        previewSubject.textContent = `Subject: ${selectedOption.text || 'Not selected'}`;
+      });
+    }
+    
+    // Material type preview
+    const typeInput = document.querySelector('#id_material_type');
+    const previewType = document.querySelector('#preview-type');
+    
+    if (typeInput && previewType) {
+      typeInput.addEventListener('change', function() {
+        const selectedOption = this.options[this.selectedIndex];
+        previewType.textContent = selectedOption.text || 'Type not selected';
+      });
+    }
+    
+    // Tags preview
+    const tagsInput = document.querySelector('#id_tags');
+    const previewTags = document.querySelector('#preview-tags');
+    
+    if (tagsInput && previewTags) {
+      tagsInput.addEventListener('input', function() {
+        const tags = this.value.split(',').map(tag => tag.trim()).filter(tag => tag);
+        previewTags.innerHTML = '';
+        
+        tags.forEach(tag => {
+          if (tag) {
+            const badge = document.createElement('span');
+            badge.className = 'badge bg-light text-dark me-1';
+            badge.textContent = tag;
+            previewTags.appendChild(badge);
+          }
+        });
+        
+        if (tags.length === 0) {
+          previewTags.innerHTML = '<span class="text-muted small">No tags added</span>';
+        }
+      });
+    }
+    
+    function formatFileSize(bytes) {
+      if (bytes === 0) return '0 Bytes';
+      const k = 1024;
+      const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+    
+    // Form validation
+    const form = document.querySelector('form');
+    if (form) {
+      form.addEventListener('submit', function(e) {
+        const title = document.querySelector('#id_title').value.trim();
+        const file = document.querySelector('#id_file').files[0];
+        
+        if (!title) {
+          e.preventDefault();
+          alert('Please enter a title for the material.');
+          return;
+        }
+        
+        if (!file) {
+          e.preventDefault();
+          alert('Please select a file to upload.');
+          return;
+        }
+        
+        // Check file size (50MB limit)
+        if (file.size > 50 * 1024 * 1024) {
+          e.preventDefault();
+          alert('File size exceeds 50MB limit. Please choose a smaller file.');
+          return;
+        }
+        
+        // Show loading state
+        const submitBtn = form.querySelector('button[type="submit"]');
+        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span> Uploading...';
+        submitBtn.disabled = true;
+      });
+    }
+  });
+</script>
+{% endblock %}

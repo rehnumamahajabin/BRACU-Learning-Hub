@@ -1,0 +1,182 @@
+{% extends 'dashboard/base.html' %}
+
+{% block content %}
+<div class="row">
+  <div class="col-lg-8">
+    <div class="card">
+      <div class="card-header">
+        <h4>Welcome to BRACU Learning Hub</h4>
+      </div>
+      <div class="card-body">
+        <p class="lead">A collaborative platform for BRAC University students to share resources, connect with peers, and enhance learning.</p>
+        <hr>
+        <div class="row">
+          <div class="col-md-4 text-center">
+            <div class="p-3">
+              <i class="bi bi-files" style="font-size: 3rem; color: #007bff;"></i>
+              <h5 class="mt-2">Study Materials</h5>
+              <p>Access notes, slides, assignments, and previous questions.</p>
+            </div>
+          </div>
+          <div class="col-md-4 text-center">
+            <div class="p-3">
+              <i class="bi bi-chat-dots" style="font-size: 3rem; color: #007bff;"></i>
+              <h5 class="mt-2">Discussions</h5>
+              <p>Participate in course discussions and ask questions.</p>
+            </div>
+          </div>
+          <div class="col-md-4 text-center">
+            <div class="p-3">
+              <i class="bi bi-people" style="font-size: 3rem; color: #007bff;"></i>
+              <h5 class="mt-2">Study Groups</h5>
+              <p>Join or create study groups for collaborative learning.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row mt-4">
+      <div class="col-md-6">
+        <div class="card">
+          <div class="card-header">
+            <h5>Recent Materials</h5>
+          </div>
+          <div class="card-body">
+            {% if recent_materials %}
+            <div class="list-group">
+              {% for material in recent_materials %}
+              <a href="{% url 'material_detail' material.pk %}" class="list-group-item list-group-item-action">
+                <div class="d-flex w-100 justify-content-between">
+                  <h6 class="mb-1">{{ material.title }}</h6>
+                  <small>{{ material.upload_date|timesince }} ago</small>
+                </div>
+                <small class="text-muted">{{ material.subject.name }} • {{ material.get_material_type_display }}</small>
+              </a>
+              {% endfor %}
+            </div>
+            {% else %}
+            <p class="text-muted">No materials yet.</p>
+            {% endif %}
+            <a href="{% url 'material_list' %}" class="btn btn-outline-primary btn-sm mt-3">View All Materials</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-6">
+        <div class="card">
+          <div class="card-header">
+            <h5>Recent Discussions</h5>
+          </div>
+          <div class="card-body">
+            {% if recent_posts %}
+            <div class="list-group">
+              {% for post in recent_posts %}
+              <a href="{% url 'post_detail' post.pk %}" class="list-group-item list-group-item-action">
+                <div class="d-flex w-100 justify-content-between">
+                  <h6 class="mb-1">{{ post.title|truncatechars:50 }}</h6>
+                  <small>{{ post.created_at|timesince }} ago</small>
+                </div>
+                <small class="text-muted">{{ post.user.username }} • {{ post.get_post_type_display }}</small>
+              </a>
+              {% endfor %}
+            </div>
+            {% else %}
+            <p class="text-muted">No discussions yet.</p>
+            {% endif %}
+            <a href="{% url 'post_list' %}" class="btn btn-outline-primary btn-sm mt-3">View All Discussions</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-4">
+    <div class="card">
+      <div class="card-header">
+        <h5>Quick Actions</h5>
+      </div>
+      <div class="card-body">
+        {% if user.is_authenticated %}
+        <div class="d-grid gap-2">
+          <a href="{% url 'material_upload' %}" class="btn btn-primary">
+            <i class="bi bi-upload"></i> Upload Material
+          </a>
+          <a href="{% url 'post_create' %}" class="btn btn-success">
+            <i class="bi bi-plus-circle"></i> Create Post
+          </a>
+          <a href="{% url 'study_group_create' %}" class="btn btn-info">
+            <i class="bi bi-people-fill"></i> Create Study Group
+          </a>
+          <a href="{% url 'saved_materials' %}" class="btn btn-warning">
+            <i class="bi bi-bookmark"></i> Saved Materials
+          </a>
+        </div>
+        {% else %}
+        <p>Please login to access all features.</p>
+        <a href="{% url 'login' %}" class="btn btn-primary">Login</a>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="card mt-4">
+      <div class="card-header">
+        <h5>Study Groups</h5>
+      </div>
+      <div class="card-body">
+        {% if study_groups %}
+        <div class="list-group">
+          {% for group in study_groups %}
+          <a href="{% url 'study_group_detail' group.pk %}" class="list-group-item list-group-item-action">
+            <div class="d-flex w-100 justify-content-between">
+              <h6 class="mb-1">{{ group.name }}</h6>
+              <small>{{ group.members.count }}/{{ group.max_members }} members</small>
+            </div>
+            <small class="text-muted">{{ group.subject.name }}</small>
+          </a>
+          {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-muted">No study groups yet.</p>
+        {% endif %}
+        <a href="{% url 'study_group_list' %}" class="btn btn-outline-info btn-sm mt-3">View All Groups</a>
+      </div>
+    </div>
+
+    <div class="card mt-4">
+      <div class="card-header">
+        <h5>Platform Stats</h5>
+      </div>
+      <div class="card-body">
+        <div class="row text-center">
+          <div class="col-6">
+            <h4>{{ total_materials|default:"0" }}</h4>
+            <p class="text-muted">Materials</p>
+          </div>
+          <div class="col-6">
+            <h4>{{ total_posts|default:"0" }}</h4>
+            <p class="text-muted">Discussions</p>
+          </div>
+          <div class="col-6">
+            <h4>{{ total_groups|default:"0" }}</h4>
+            <p class="text-muted">Study Groups</p>
+          </div>
+          <div class="col-6">
+            <h4>{{ total_users|default:"0" }}</h4>
+            <p class="text-muted">Users</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  // Add any JavaScript for home page here
+  document.addEventListener('DOMContentLoaded', function() {
+    console.log('BRACU Learning Hub Home Page Loaded');
+  });
+</script>
+{% endblock %}

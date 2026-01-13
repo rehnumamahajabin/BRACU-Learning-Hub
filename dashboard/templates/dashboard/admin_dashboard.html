@@ -1,0 +1,526 @@
+{% extends 'dashboard/base.html' %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h2>Admin Dashboard</h2>
+    <p class="text-muted">Manage platform content and user reports</p>
+  </div>
+  <div>
+    <a href="/admin/" class="btn btn-dark" target="_blank">
+      <i class="bi bi-gear"></i> Django Admin
+    </a>
+    <a href="{% url 'home' %}" class="btn btn-outline-secondary ms-2">
+      <i class="bi bi-house"></i> Back to Home
+    </a>
+  </div>
+</div>
+
+<div class="row">
+  <!-- Statistics Cards -->
+  <div class="col-md-3 mb-4">
+    <div class="card bg-primary text-white">
+      <div class="card-body">
+        <div class="d-flex justify-content-between">
+          <div>
+            <h6 class="card-title">Total Users</h6>
+            <h2>{{ total_users|default:"0" }}</h2>
+          </div>
+          <div>
+            <i class="bi bi-people" style="font-size: 2.5rem;"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-3 mb-4">
+    <div class="card bg-success text-white">
+      <div class="card-body">
+        <div class="d-flex justify-content-between">
+          <div>
+            <h6 class="card-title">Approved Materials</h6>
+            <h2>{{ approved_materials|default:"0" }}</h2>
+          </div>
+          <div>
+            <i class="bi bi-file-check" style="font-size: 2.5rem;"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-3 mb-4">
+    <div class="card bg-warning text-dark">
+      <div class="card-body">
+        <div class="d-flex justify-content-between">
+          <div>
+            <h6 class="card-title">Pending Materials</h6>
+            <h2>{{ pending_materials.count|default:"0" }}</h2>
+          </div>
+          <div>
+            <i class="bi bi-clock-history" style="font-size: 2.5rem;"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-3 mb-4">
+    <div class="card bg-danger text-white">
+      <div class="card-body">
+        <div class="d-flex justify-content-between">
+          <div>
+            <h6 class="card-title">Reports</h6>
+            <h2>{{ total_reports|default:"0" }}</h2>
+          </div>
+          <div>
+            <i class="bi bi-flag" style="font-size: 2.5rem;"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row">
+  <!-- Pending Materials -->
+  <div class="col-lg-6 mb-4">
+    <div class="card">
+      <div class="card-header bg-warning bg-opacity-10">
+        <div class="d-flex justify-content-between align-items-center">
+          <h5>Pending Materials Review</h5>
+          <span class="badge bg-warning">{{ pending_materials.count }}</span>
+        </div>
+      </div>
+      <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+        {% if pending_materials %}
+        {% for material in pending_materials %}
+        <div class="card mb-3">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-start">
+              <div>
+                <h6 class="mb-1">{{ material.title }}</h6>
+                <small class="text-muted">
+                  {{ material.subject.name }} • {{ material.get_material_type_display }}
+                </small>
+              </div>
+              <small>{{ material.upload_date|timesince }} ago</small>
+            </div>
+            <p class="small mb-2">{{ material.description|truncatechars:100 }}</p>
+            <div class="d-flex justify-content-between align-items-center">
+              <small>
+                <i class="bi bi-person"></i> {{ material.uploaded_by.username }}
+              </small>
+              <div>
+                <a href="{% url 'material_detail' material.pk %}" class="btn btn-sm btn-outline-primary">
+                  <i class="bi bi-eye"></i> Review
+                </a>
+                <button class="btn btn-sm btn-outline-success" onclick="approveMaterial('{{ material.pk }}')">
+                  <i class="bi bi-check"></i> Approve
+                </button>
+                <button class="btn btn-sm btn-outline-danger" onclick="rejectMaterial('{{ material.pk }}')">
+                  <i class="bi bi-x"></i> Reject
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+        {% else %}
+        <div class="text-center py-4">
+          <i class="bi bi-check-circle" style="font-size: 2rem; color: #28a745;"></i>
+          <p class="mt-2 text-muted">No pending materials to review</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Reported Content -->
+  <div class="col-lg-6 mb-4">
+    <div class="card">
+      <div class="card-header bg-danger bg-opacity-10">
+        <div class="d-flex justify-content-between align-items-center">
+          <h5>Reported Content</h5>
+          <span class="badge bg-danger">{{ total_reports }}</span>
+        </div>
+      </div>
+      <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+        <ul class="nav nav-tabs" id="reportsTab" role="tablist">
+          <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="posts-tab" data-bs-toggle="tab" data-bs-target="#posts" type="button">
+              Posts ({{ reported_posts.count }})
+            </button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="comments-tab" data-bs-toggle="tab" data-bs-target="#comments" type="button">
+              Comments ({{ reported_comments.count }})
+            </button>
+          </li>
+        </ul>
+        
+        <div class="tab-content mt-3">
+          <!-- Reported Posts -->
+          <div class="tab-pane fade show active" id="posts">
+            {% if reported_posts %}
+            {% for post in reported_posts %}
+            <div class="card mb-3 border-danger">
+              <div class="card-body">
+                <h6 class="mb-1">{{ post.title }}</h6>
+                <small class="text-muted">
+                  {{ post.get_post_type_display }} • {{ post.user.username }}
+                </small>
+                <p class="small mb-2">{{ post.content|truncatechars:150 }}</p>
+                <div class="d-flex justify-content-between">
+                  <small>{{ post.created_at|timesince }} ago</small>
+                  <div>
+                    <a href="{% url 'post_detail' post.pk %}" class="btn btn-sm btn-outline-primary">
+                      <i class="bi bi-eye"></i> View
+                    </a>
+                    <button class="btn btn-sm btn-outline-success" onclick="approvePost('{{ post.pk }}')">
+                      <i class="bi bi-check"></i> Keep
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger" onclick="removePost('{{ post.pk }}')">
+                      <i class="bi bi-trash"></i> Remove
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            {% endfor %}
+            {% else %}
+            <div class="text-center py-4">
+              <i class="bi bi-check-circle" style="font-size: 2rem; color: #28a745;"></i>
+              <p class="mt-2 text-muted">No reported posts</p>
+            </div>
+            {% endif %}
+          </div>
+          
+          <!-- Reported Comments -->
+          <div class="tab-pane fade" id="comments">
+            {% if reported_comments %}
+            {% for comment in reported_comments %}
+            <div class="card mb-3 border-danger">
+              <div class="card-body">
+                <div class="d-flex justify-content-between">
+                  <div>
+                    <strong>{{ comment.user.username }}</strong>
+                    <small class="text-muted">on {{ comment.material.title|default:comment.post.title }}</small>
+                  </div>
+                  <small>{{ comment.created_at|timesince }} ago</small>
+                </div>
+                <p class="mb-2">{{ comment.content|truncatechars:200 }}</p>
+                <div class="d-flex justify-content-between">
+                  <small>
+                    <i class="bi bi-hand-thumbs-up"></i> {{ comment.upvotes }}
+                    <i class="bi bi-hand-thumbs-down ms-2"></i> {{ comment.downvotes }}
+                  </small>
+                  <div>
+                    <button class="btn btn-sm btn-outline-success" onclick="approveComment('{{ comment.pk }}')">
+                      <i class="bi bi-check"></i> Keep
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger" onclick="removeComment('{{ comment.pk }}')">
+                      <i class="bi bi-trash"></i> Remove
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            {% endfor %}
+            {% else %}
+            <div class="text-center py-4">
+              <i class="bi bi-check-circle" style="font-size: 2rem; color: #28a745;"></i>
+              <p class="mt-2 text-muted">No reported comments</p>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row">
+  <!-- User Management -->
+  <div class="col-lg-6 mb-4">
+    <div class="card">
+      <div class="card-header">
+        <h5>User Management</h5>
+      </div>
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table table-hover">
+            <thead>
+              <tr>
+                <th>Username</th>
+                <th>Email</th>
+                <th>Role</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for user_obj in users|slice:":5" %}
+              <tr>
+                <td>{{ user_obj.username }}</td>
+                <td>{{ user_obj.email }}</td>
+                <td>
+                  {% if user_obj.is_superuser %}
+                  <span class="badge bg-danger">Admin</span>
+                  {% elif user_obj.is_staff %}
+                  <span class="badge bg-warning">Staff</span>
+                  {% else %}
+                  <span class="badge bg-secondary">User</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if user_obj.is_active %}
+                  <span class="badge bg-success">Active</span>
+                  {% else %}
+                  <span class="badge bg-danger">Inactive</span>
+                  {% endif %}
+                </td>
+                <td>
+                  <button class="btn btn-sm btn-outline-primary" onclick="viewUser('{{ user_obj.pk }}')">
+                    <i class="bi bi-eye"></i>
+                  </button>
+                  <button class="btn btn-sm btn-outline-warning" onclick="editUser('{{ user_obj.pk }}')">
+                    <i class="bi bi-pencil"></i>
+                  </button>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <a href="/admin/auth/user/" class="btn btn-outline-primary w-100" target="_blank">
+          <i class="bi bi-people"></i> Manage All Users
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Platform Statistics -->
+  <div class="col-lg-6 mb-4">
+    <div class="card">
+      <div class="card-header">
+        <h5>Platform Statistics</h5>
+      </div>
+      <div class="card-body">
+        <ul class="list-group list-group-flush">
+          <li class="list-group-item d-flex justify-content-between">
+            <span>Total Materials</span>
+            <strong>{{ total_materials|default:"0" }}</strong>
+          </li>
+          <li class="list-group-item d-flex justify-content-between">
+            <span>Total Posts</span>
+            <strong>{{ total_posts|default:"0" }}</strong>
+          </li>
+          <li class="list-group-item d-flex justify-content-between">
+            <span>Total Comments</span>
+            <strong>{{ total_comments|default:"0" }}</strong>
+          </li>
+          <li class="list-group-item d-flex justify-content-between">
+            <span>Study Groups</span>
+            <strong>{{ total_groups|default:"0" }}</strong>
+          </li>
+          <li class="list-group-item d-flex justify-content-between">
+            <span>Active Today</span>
+            <strong>{{ active_today|default:"0" }}</strong>
+          </li>
+          <li class="list-group-item d-flex justify-content-between">
+            <span>Storage Used</span>
+            <strong>{{ storage_used|default:"0 MB" }}</strong>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="card">
+  <div class="card-header">
+    <h5>Quick Actions</h5>
+  </div>
+  <div class="card-body">
+    <div class="row">
+      <div class="col-md-3 mb-3">
+        <a href="/admin/dashboard/material/" class="btn btn-outline-primary w-100" target="_blank">
+          <i class="bi bi-files"></i> Manage Materials
+        </a>
+      </div>
+      <div class="col-md-3 mb-3">
+        <a href="/admin/dashboard/post/" class="btn btn-outline-primary w-100" target="_blank">
+          <i class="bi bi-chat-text"></i> Manage Posts
+        </a>
+      </div>
+      <div class="col-md-3 mb-3">
+        <a href="/admin/auth/user/" class="btn btn-outline-primary w-100" target="_blank">
+          <i class="bi bi-people"></i> Manage Users
+        </a>
+      </div>
+      <div class="col-md-3 mb-3">
+        <a href="/admin/dashboard/subject/" class="btn btn-outline-primary w-100" target="_blank">
+          <i class="bi bi-journal-text"></i> Manage Subjects
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    console.log('Admin Dashboard Loaded');
+  });
+
+  function approveMaterial(materialId) {
+    if (confirm('Approve this material?')) {
+      fetch(`/api/approve-material/${materialId}/`, {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': '{{ csrf_token }}',
+          'Content-Type': 'application/json',
+        },
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          alert('Material approved successfully!');
+          location.reload();
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        alert('Error approving material');
+      });
+    }
+  }
+
+  function rejectMaterial(materialId) {
+    if (confirm('Reject this material?')) {
+      fetch(`/api/reject-material/${materialId}/`, {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': '{{ csrf_token }}',
+          'Content-Type': 'application/json',
+        },
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          alert('Material rejected successfully!');
+          location.reload();
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        alert('Error rejecting material');
+      });
+    }
+  }
+
+  function approvePost(postId) {
+    if (confirm('Mark this post as safe?')) {
+      fetch(`/api/approve-post/${postId}/`, {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': '{{ csrf_token }}',
+          'Content-Type': 'application/json',
+        },
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          alert('Post approved successfully!');
+          location.reload();
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        alert('Error approving post');
+      });
+    }
+  }
+
+  function removePost(postId) {
+    if (confirm('Remove this post?')) {
+      fetch(`/api/remove-post/${postId}/`, {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': '{{ csrf_token }}',
+          'Content-Type': 'application/json',
+        },
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          alert('Post removed successfully!');
+          location.reload();
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        alert('Error removing post');
+      });
+    }
+  }
+
+  function approveComment(commentId) {
+    if (confirm('Mark this comment as safe?')) {
+      fetch(`/api/approve-comment/${commentId}/`, {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': '{{ csrf_token }}',
+          'Content-Type': 'application/json',
+        },
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          alert('Comment approved successfully!');
+          location.reload();
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        alert('Error approving comment');
+      });
+    }
+  }
+
+  function removeComment(commentId) {
+    if (confirm('Remove this comment?')) {
+      fetch(`/api/remove-comment/${commentId}/`, {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': '{{ csrf_token }}',
+          'Content-Type': 'application/json',
+        },
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          alert('Comment removed successfully!');
+          location.reload();
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        alert('Error removing comment');
+      });
+    }
+  }
+
+  function viewUser(userId) {
+    window.open(`/admin/auth/user/${userId}/change/`, '_blank');
+  }
+
+  function editUser(userId) {
+    window.open(`/admin/auth/user/${userId}/change/`, '_blank');
+  }
+</script>
+{% endblock %}
